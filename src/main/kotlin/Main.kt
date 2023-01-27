@@ -1,11 +1,10 @@
 import java.io.File
-import java.security.KeyPair
-import java.security.KeyPairGenerator
-import java.security.PrivateKey
-import java.security.PublicKey
+import java.math.BigInteger
+import java.security.*
 import java.security.interfaces.RSAPrivateKey
 import java.security.interfaces.RSAPublicKey
 import javax.crypto.Cipher
+import kotlin.math.ln
 
 fun main() {
     val message = "YERZHAN"
@@ -19,7 +18,7 @@ fun main() {
     println("Encrypted Message: $encryptedMessage")
 
     val encryptedMessageAsCharArray = encryptedMessage.toString().toCharArray()
-    var encryptedMessageAsNumbers : String = ""
+    var encryptedMessageAsNumbers = ""
     print("Encrypted Message as Numbers: ")
     for (character in encryptedMessageAsCharArray) {
         encryptedMessageAsNumbers+="{${character.code}} "
@@ -29,13 +28,32 @@ fun main() {
     val decryptedMessage = decrypt(encryptedMessage, keyPair.private)
     println("Decrypted Message: $decryptedMessage")
 
-    val decryptedMessageAsCharArray = decryptedMessage.toString().toCharArray()
-    var decryptedMessageAsNumbers : String = ""
+    val decryptedMessageAsCharArray = decryptedMessage.toCharArray()
+    var decryptedMessageAsNumbers = ""
     print("Decrypted Message as Numbers: ")
     for (character in decryptedMessageAsCharArray) {
         decryptedMessageAsNumbers+="{${character.code}} "
     }
     println(decryptedMessageAsNumbers)
+
+    //EDS Part
+    val digest = MessageDigest.getInstance("SHA-256")
+    val hashedMessage = digest.digest(message.toByteArray())
+    val hashValueOfMessage = BigInteger(1,hashedMessage)
+    val d : BigInteger? = (keyPair.private as RSAPrivateKey).privateExponent
+    val n : BigInteger? = (keyPair.private as RSAPrivateKey).modulus
+    var signature = hashValueOfMessage.modPow(d, n)
+    signature++
+    println("Signature:                   $signature")
+    val e : BigInteger? = (keyPair.public as RSAPublicKey).publicExponent
+    val verifiedHashValue = signature.modPow(e, n)
+    println("Verified/Checked Hash Value: $verifiedHashValue")
+    println("Hash Value of Message:       $hashValueOfMessage")
+    if(verifiedHashValue == hashValueOfMessage){
+        println("Signature is valid")
+    }else{
+        println("Signature is invalid")
+    }
 }
 fun savePublicKeys(publicKey : RSAPublicKey) {
     val result : String = "n: ${publicKey.modulus}\n" +
@@ -64,7 +82,5 @@ fun decrypt(encryptedMessage: ByteArray, privateKey: PrivateKey): String {
     cipher.init(Cipher.DECRYPT_MODE, privateKey)
     return String(cipher.doFinal(encryptedMessage))
 }
-
-
 
 
